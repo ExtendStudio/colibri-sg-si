@@ -2,7 +2,7 @@
   "name": "colibriwp/colibri-sg-si",
   "description": "ColibriWP  WP-CLI commands for SG WordPress Starter",
   "type": "wp-cli-package",
-  "license": "GPL",
+  "license": "GPL-3.0-or-later",
   "minimum-stability": "stable",
   "authors": [
     {
