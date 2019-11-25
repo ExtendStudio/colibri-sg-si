@@ -1,0 +1,23 @@
+{
+  "name": "colibriwp/colibri-sg-si",
+  "description": "ColibriWP  WP-CLI commands for SiteGround WordPress Starter",
+  "type": "wp-cli-package",
+  "license": "GPL",
+  "minimum-stability": "stable",
+  "authors": [
+    {
+      "name": "ColibriWP",
+      "email": "support@colibriwp.com"
+    },
+    {
+      "name": "Iulian Palade",
+      "email": "iulian.palade@extendstudio.com"
+    }
+  ],
+  "require": {},
+  "autoload": {
+    "files": [
+      "colibri-sg-cli.php"
+    ]
+  }
+}
