@@ -1,2 +1,2 @@
 # colibri-sg-si
-ColibriWP  WP-CLI commands for SiteGround WordPress Starter
+ColibriWP  WP-CLI commands for SG WordPress Starter
