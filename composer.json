@@ -1,8 +1,8 @@
 {
   "name": "colibriwp/colibri-sg-si",
-  "description": "ColibriWP  WP-CLI commands for SiteGround WordPress Starter",
+  "description": "ColibriWP  WP-CLI commands for SG WordPress Starter",
   "type": "wp-cli-package",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL",
   "minimum-stability": "stable",
   "authors": [
     {

@@ -9,7 +9,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
         const COLIBRI_PLUGIN = 'colibri-page-builder/colibri-page-builder.php';
         const IMPORTER_PLUGIN = 'wordpress-importer/wordpress-importer.php';
-        const DEMO_URL_BASE = 'http://extendstudio.net/sg-demos/demo-{{id}}.json';
+        const DEMO_URL_BASE = 'https://colibriwp.com/sg-demos/demo-{{id}}.json';
         const SITEGROUND_WIZARD = "wordpress-starter/siteground-wizard.php";
 
         /** @var \WP_Import $this */
