@@ -1,9 +1,10 @@
 <?php
 
-
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
-    define( 'WP_LOAD_IMPORTERS', true );
+    if ( ! defined( 'WP_LOAD_IMPORTERS' ) ) {
+        define( 'WP_LOAD_IMPORTERS', true );
+    }
 
     class ColibriWPSGCLI extends WP_CLI_Command {
 
@@ -44,7 +45,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
             $this->clear_log();
             $this->install_if_missing();
-            $this->wp_importer   = new \WP_Import();
+            $this->wp_importer = new \WP_Import();
             \ExtendBuilder\register_custom_post_types();
         }
 
@@ -133,7 +134,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
             $this->log( 'Import Widgets' );
             $this->colibri_import_widgets( $json['wie'] );
             $this->finish();
-
 
             return false;
         }
@@ -328,7 +328,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                 if ( ! empty( $meta ) ) {
                     foreach ( $meta as $item ) {
                         if ( $item['key'] === 'extend_builder' ) {
-                            $value                                     = unserialize( $item['value'] );
+                            $value = unserialize( $item['value'] );
                             $this->mapAdd( 'post_json', $post_id, intval( $value['json'] ) );
                         }
                     };
