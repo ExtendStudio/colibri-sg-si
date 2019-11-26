@@ -1,5 +1,6 @@
 <?php
 
+
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
     if ( ! defined( 'WP_LOAD_IMPORTERS' ) ) {
@@ -740,8 +741,26 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                     $this->log( "Set local style: partial - {$id} => {$new_id} | json - {$json_id} => {$new_json_id}" );
 
                     $this->set_item_local_style( $new_id, $partial_content, $id, $new_id );
+
+                    if ( json_decode( $json_content ) ) {
+                        $json_content = wp_slash( $json_content );
+                    }
+
                     $this->set_item_local_style( $new_json_id, $json_content, $id, $new_id );
 
+                    $post_data = new \ExtendBuilder\PostData( $new_id );
+
+                    //// update meta
+                    $meta     = $post_data->get_meta_value( 'meta', array() );
+                    $new_meta = array();
+                    foreach ( $meta as $key => $value ) {
+                        \ExtendBuilder\array_set_value( $new_meta,
+                            \ExtendBuilder\Import::replace_partial_id_short( $key, $id, $new_id ), $value );
+                    }
+                    $post_data->set_meta_value( 'meta', $new_meta );
+
+
+                    //// update partial_css
                     $partial_css = $cssByPartialId[ $id ];
 
                     foreach ( $partial_css as $style_id => $css_by_media ) {
