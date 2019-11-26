@@ -3,7 +3,9 @@
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
-    define( 'WP_LOAD_IMPORTERS', true );
+    if ( ! defined( 'WP_LOAD_IMPORTERS' ) ) {
+        define( 'WP_LOAD_IMPORTERS', true );
+    }
 
     class ColibriWPSGCLI extends WP_CLI_Command {
 
@@ -29,6 +31,9 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
             'post_json' => array(),
             'menus'     => array(),
         );
+        private $partials_by_id = [];
+
+
         private $colibri_post_types = null;
 
 
@@ -44,7 +49,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
             $this->clear_log();
             $this->install_if_missing();
-            $this->wp_importer   = new \WP_Import();
+            $this->wp_importer = new \WP_Import();
             \ExtendBuilder\register_custom_post_types();
         }
 
@@ -132,8 +137,10 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
             $this->colibri_import_options( $json['dat'] );
             $this->log( 'Import Widgets' );
             $this->colibri_import_widgets( $json['wie'] );
+            $this->log( 'Prepare Local Style' );
+            $this->prepare_local_style();
+            $this->log( 'Finish' );
             $this->finish();
-
 
             return false;
         }
@@ -301,6 +308,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                 'after'  => count( $result )
             ) );
 
+
             return $result;
         }
 
@@ -312,7 +320,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
             $this->log( $colibri_post_types );
 
-            foreach ( $posts as $post ) {
+            foreach ( $posts as $index => $post ) {
                 $post_type = $post['post_type'];
                 $guid      = $post['guid'];
                 $post_id   = $post['post_id'];
@@ -325,15 +333,24 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                     $this->mapAdd( 'pages', $guid, $post_id );
                 }
 
+                $post['json_data'] = false;
+
                 if ( ! empty( $meta ) ) {
                     foreach ( $meta as $item ) {
                         if ( $item['key'] === 'extend_builder' ) {
-                            $value                                     = unserialize( $item['value'] );
+                            $value = unserialize( $item['value'] );
                             $this->mapAdd( 'post_json', $post_id, intval( $value['json'] ) );
+                            $post['json_data'] = intval( $value['json'] );
                         }
                     };
                 }
+
+                if ( in_array( $post_type, $colibri_post_types ) || $post_type === 'page' ) {
+                    $this->partials_by_id[ intval( $post_id ) ] = $post;
+                }
+
             }
+
 
             $this->log( array_merge( (array) 'Pre import posts', $this->import_map ) );
         }
@@ -370,6 +387,8 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
             $pages = $this->mapGet( 'pages' );
             $this->mapSet( 'pages', $this->colibri_process_mapped_batch( $pages ) );
+
+            $this->log( array( 'MAP AFTER', $this->import_map ) );
         }
 
         private function colibri_post_import_posts_process_json() {
@@ -518,7 +537,8 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                 set_theme_mod( $key, $value );
             }
 
-
+            $pages_map = $this->mapGet( 'pages' );
+            $this->log( array( 'Options set pages map', $pages_map ) );
             if ( isset( $data['options'] ) ) {
                 $options      = $data['options'];
                 $options_keys = array(
@@ -529,9 +549,18 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                     "site_icon",
                 );
 
+
                 foreach ( $options_keys as $key ) {
                     if ( isset( $options[ $key ] ) ) {
-                        update_option( $key, $options[ $key ] );
+                        $value = $options[ $key ];
+
+                        if ( in_array( $key, array( 'page_on_front', 'page_for_posts' ) ) ) {
+                            if ( isset( $pages_map[ $value ] ) ) {
+                                $value = $pages_map[ $value ];
+                            }
+                        }
+
+                        update_option( $key, $value );
                     }
                 }
             }
@@ -677,6 +706,75 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
             } catch ( \Exception $e ) {
                 $this->log( $e->getMessage(), 'ERROR' );
             }
+        }
+
+
+        private function prepare_local_style() {
+            $theme           = \ExtendBuilder\get_theme_data();
+            $cssByPartialId  = \ExtendBuilder\get_key_value( $theme, 'cssByPartialId', array() );
+            $new_partial_css = array();
+
+            foreach ( $this->partials_by_id as $id => $partial ) {
+                $id      = intval( $id );
+                $json_id = $partial['json_data'];
+
+                $new_id      = false;
+                $new_json_id = false;
+
+                if ( isset( $this->import_map['partials'][ $id ] ) ) {
+                    $new_id = $this->import_map['partials'][ $id ];
+                }
+
+                if ( isset( $this->import_map['pages'][ $id ] ) ) {
+                    $new_id = $this->import_map['pages'][ $id ];
+                }
+
+                if ( isset( $this->import_map['partials'][ $json_id ] ) ) {
+                    $new_json_id = $this->import_map['partials'][ $json_id ];
+                }
+
+
+                if ( $new_id && $new_json_id ) {
+                    $partial_content = $partial['post_content'];
+                    $json_content    = $this->partials_by_id[ $json_id ]['post_content'];
+
+                    $this->log( "Set local style: partial - {$id} => {$new_id} | json - {$json_id} => {$new_json_id}" );
+
+                    $this->set_item_local_style( $new_id, $partial_content, $id, $new_id );
+                    $this->set_item_local_style( $new_json_id, $json_content, $id, $new_id );
+
+                    $partial_css = $cssByPartialId[ $id ];
+
+                    foreach ( $partial_css as $style_id => $css_by_media ) {
+                        foreach ( $css_by_media as $media => $css ) {
+                            $new_css = $css;
+
+                            $new_css = preg_replace( '/([\-])(' . $id . ')([\-])/i',
+                                '${1}' . $new_id . '${3}', $new_css );
+
+                            $new_style_id = \ExtendBuilder\Import::replace_partial_id_short( $style_id, $id, $new_id );
+                            \ExtendBuilder\array_set_value( $new_partial_css, [ $new_id, $new_style_id, $media ],
+                                $new_css );
+                        }
+                    }
+
+                }
+
+            }
+
+            \ExtendBuilder\array_set_value( $theme, 'cssByPartialId', $new_partial_css );
+            \ExtendBuilder\save_theme_data( $theme );
+        }
+
+        private function set_item_local_style( $id, $content, $find_id, $replace_with_id ) {
+            $content = \ExtendBuilder\Import::replace_partial_id( $content, $find_id, $replace_with_id );
+
+            wp_update_post(
+                array(
+                    'ID'           => $id,
+                    'post_content' => $content
+                )
+            );
         }
 
         private function finish() {
